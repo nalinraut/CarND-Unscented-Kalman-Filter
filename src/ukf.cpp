@@ -1,6 +1,9 @@
 #include "ukf.h"
+#include "tools.h"
 #include "Eigen/Dense"
 #include <iostream>
+
+#define EPS 0.001; // A small number
 
 using namespace std;
 using Eigen::MatrixXd;
@@ -44,13 +47,6 @@ UKF::UKF() {
   // Radar measurement noise standard deviation radius change in m/s
   std_radrd_ = 0.3;
 
-  /**
-  TODO:
-
-  Complete the initialization. See ukf.h for other member properties.
-
-  Hint: one or more values initialized above might be wildly off...
-  */
   // State dimension
   n_x_ = x_.size();
 
@@ -85,6 +81,14 @@ UKF::UKF() {
 UKF::~UKF() {}
 
 /**
+ * Normalizes angle to [-pi, pi]
+ */
+void UKF::NormalizeAng(double *ang) {
+  while (*ang > M_PI)  *ang -= 2.0 * M_PI;
+  while (*ang < -M_PI) *ang += 2.0 * M_PI;
+}
+
+/**
  * @param {MeasurementPackage} meas_package The latest measurement data of
  * either radar or laser.
  */
@@ -95,6 +99,73 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
   Complete this function! Make sure you switch between lidar and radar
   measurements.
   */
+  // Initialize
+  if (!is_initialized_) {
+    // Covariance matrix
+    P_ << 1, 0, 0, 0, 0,
+          0, 1, 0, 0, 0,
+          0, 0, 1, 0, 0,
+          0, 0, 0, 1, 0,
+          0, 0, 0, 0, 1;
+
+    // Radar measurement
+    if (meas_package.sensor_type_ == MeasurementPackage::RADAR) {
+      // Conver from polar to cartesian coordinates
+      float rho = meas_package.raw_measurements_[0];
+      float phi = meas_package.raw_measurements_[1];
+      float rho_dot = meas_package.raw_measurements_[3];
+      float px = rho * cos(phi);
+      float py = rho * sin(phi);
+      float vx = rho_dot * cos(phi);
+      float vy = rho_dot * sin(phi);
+      float v = sqrt(pow(vx, 2) + pow(vy, 2));
+      // Initialize state
+      x_ << px, py, v, 0, 0;
+    } else if (meas_package.sensor_type_ == MeasurementPackage::LASER) {
+      // Use 0 for the first measurement of velocity as we don't know it
+      float px = meas_package.raw_measurements_[0];
+      float py = meas_package.raw_measurements_[1];
+      // Initialize state
+      x_ << px, py, 0, 0, 0;
+      // Make sure we don't divide by 0
+      if (fabs(x_(0)) < EPS && fabs(x_(1)) < EPS) {
+        x_(0) = EPS;
+        x_(1) = EPS;
+      }
+    }
+
+    // Initialize the weights
+    // First weight
+    weights_(0) = lambda_ / (lambda_ + n_aug_);
+    // Subsequent weights
+    for (int i = 1; i < weights_.size(); i++) {
+      weights_(i) = 0.5 / (lambda_ + n_aug_);
+    }
+
+    // Calculate dt: save initial timestamp
+    time_us_ = meas_package.timestamp_;
+
+    // Initialization complete
+    is_initialized_ = true;
+
+    return;
+  }
+
+  // Calculate dt
+  double dt = (meas_package.timestamp_ - time_us_);
+  dt /= 1000000.0; // convert micros to s
+  time_us_ = meas_package.timestamp_;
+
+  // Prediction step
+  Prediction(dt);
+
+  // Update step
+  if (meas_package.sensor_type_ == MeasurementPackage::RADAR && use_radar_) {
+    UpdateRadar(meas_package);
+  }
+  if (meas_package.sensor_type_ == MeasurementPackage::LASER && use_laser_) {
+    UpdateLidar(meas_package);
+  }
 }
 
 /**

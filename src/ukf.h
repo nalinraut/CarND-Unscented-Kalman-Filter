@@ -95,7 +95,7 @@ public:
   /**
    *  Angle normalization to [-Pi, Pi]
    */
-  void NormAng(double *ang);
+  void NormalizeAng(double *ang);
 
   /**
    * ProcessMeasurement
