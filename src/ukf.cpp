@@ -24,10 +24,10 @@ UKF::UKF() {
   P_ = MatrixXd(5, 5);
 
   // Process noise standard deviation longitudinal acceleration in m/s^2
-  std_a_ = 30;
+  std_a_ = 1.5;
 
   // Process noise standard deviation yaw acceleration in rad/s^2
-  std_yawdd_ = 30;
+  std_yawdd_ = 0.57;
 
   // Laser measurement noise standard deviation position1 in m
   std_laspx_ = 0.15;
@@ -51,6 +51,35 @@ UKF::UKF() {
 
   Hint: one or more values initialized above might be wildly off...
   */
+  // State dimension
+  n_x_ = x_.size();
+
+  // Augmented s dimension
+  n_aug_ = n_x_ + 2;
+
+  // Sigma points
+  n_sig_ = 2 * n_aug_ + 1;
+
+  // Predicted sigma points matrix
+  Xsig_pred_ = MatrixXd(n_x_, n_sig_);
+
+  // Spreading parameter lambda
+  lambda_ = 3 - n_aug_;
+
+  // Sigma point weights
+  weights_ = VectorXd(n_sig_);
+
+  // Measurement noise covariance matices
+  // Radar matrix
+  R_radar_ = MatrixXd(3, 3);
+  R_radar_ << pow(std_radr_, 2), 0,                   0,
+              0,                 pow(std_radphi_, 2), 0,
+              0,                 0,                   pow(std_radrd_, 2);
+
+  // Radar matrix
+  R_lidar_ = MatrixXd(2, 2);
+  R_lidar_ << pow(std_laspx_, 2), 0,
+              0,                  pow(std_laspy_, 2);
 }
 
 UKF::~UKF() {}
