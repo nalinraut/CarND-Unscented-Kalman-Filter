@@ -6,6 +6,7 @@
 #include <vector>
 #include <string>
 #include <fstream>
+#include "tools.h"
 
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
@@ -93,7 +94,7 @@ public:
   virtual ~UKF();
 
   /**
-   *  Angle normalization to [-Pi, Pi]
+   * Normalizes angle to [-pi, pi]
    */
   void NormalizeAng(double *ang);
 

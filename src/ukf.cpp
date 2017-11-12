@@ -14,6 +14,7 @@ using std::vector;
  * Initializes Unscented Kalman filter
  */
 UKF::UKF() {
+  is_initialized_ = false;
   // if this is false, laser measurements will be ignored (except during init)
   use_laser_ = true;
 
@@ -72,7 +73,7 @@ UKF::UKF() {
               0,                 pow(std_radphi_, 2), 0,
               0,                 0,                   pow(std_radrd_, 2);
 
-  // Radar matrix
+  // Lidas matrix
   R_lidar_ = MatrixXd(2, 2);
   R_lidar_ << pow(std_laspx_, 2), 0,
               0,                  pow(std_laspy_, 2);
@@ -105,14 +106,15 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
     // Radar measurement
     if (meas_package.sensor_type_ == MeasurementPackage::RADAR) {
       // Conver from polar to cartesian coordinates
-      float rho = meas_package.raw_measurements_[0];
-      float phi = meas_package.raw_measurements_[1];
+      float rho     = meas_package.raw_measurements_[0];
+      float phi     = meas_package.raw_measurements_[1];
       float rho_dot = meas_package.raw_measurements_[3];
+
       float px = rho * cos(phi);
       float py = rho * sin(phi);
       float vx = rho_dot * cos(phi);
       float vy = rho_dot * sin(phi);
-      float v = sqrt(pow(vx, 2) + pow(vy, 2));
+      float v  = sqrt(pow(vx, 2) + pow(vy, 2));
       // Initialize state
       x_ << px, py, v, 0, 0;
     } else if (meas_package.sensor_type_ == MeasurementPackage::LASER) {
@@ -133,7 +135,7 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
     weights_(0) = lambda_ / (lambda_ + n_aug_);
     // Subsequent weights
     for (int i = 1; i < weights_.size(); i++) {
-      weights_(i) = 0.5 / (lambda_ + n_aug_);
+      weights_(i) = 0.5 / (n_aug_ + lambda_);
     }
 
     // Calculate dt: save initial timestamp
@@ -160,6 +162,9 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
   if (meas_package.sensor_type_ == MeasurementPackage::LASER && use_laser_) {
     UpdateLidar(meas_package);
   }
+  cout << "x_" << x_ << endl;
+  cout << "NIS_laser_ " << NIS_laser_ << endl;
+  cout << "NIS_radar_ " << NIS_radar_ << endl;
 }
 
 /**
@@ -172,7 +177,7 @@ void UKF::Prediction(double delta_t) {
   // Aug mean vector
   VectorXd x_aug = VectorXd(n_aug_);
   // Aug state covariance matrix
-  MatrixXd P_aug = MatrixXd(n_aug_, n_sig_);
+  MatrixXd P_aug = MatrixXd(n_aug_, n_aug_);
   // Sigma points matrix
   MatrixXd Xsig_aug = MatrixXd(n_aug_, n_sig_);
 
@@ -194,7 +199,7 @@ void UKF::Prediction(double delta_t) {
     sqrt_lambda_n_aug_L = sqrt_lambda_n_aug * L.col(i);
 
     Xsig_aug.col(i + 1)          = x_aug + sqrt_lambda_n_aug_L;
-    Xsig_aug.col(i + 1 - n_aug_) = x_aug - sqrt_lambda_n_aug_L;
+    Xsig_aug.col(i + 1 + n_aug_) = x_aug - sqrt_lambda_n_aug_L;
   }
 
   // Predict the sigma points
@@ -291,9 +296,9 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
     double v_1 = cos(yaw) * v;
     double v_2 = sin(yaw) * v;
     // Measurement model
-    Zsig(0,i) = sqrt(pow(p_x, 2) + pow(p_y, 2));     // r
-    Zsig(1,i) = atan2(p_y, p_x);                     // phi
-    Zsig(2,i) = (p_x * v_1 + p_y * v_2) / Zsig(0,i); // r_dot
+    Zsig(0,i) = sqrt(pow(p_x, 2) + pow(p_y, 2)); // r
+    Zsig(1,i) = atan2(p_y, p_x);                 // phi
+    Zsig(2,i) = (p_x*v_1 + p_y*v_2) / Zsig(0,i); // r_dot
   }
 
   UpdateUKF(meas_package, Zsig, n_z);
@@ -328,7 +333,7 @@ void UKF::UpdateUKF(MeasurementPackage meas_package, MatrixXd Zsig, int n_z) {
   }
 
   // Add noise
-  S += R;
+  S = S + R;
 
   // Cross correlation Tc
   MatrixXd Tc = MatrixXd(n_x_, n_z);
@@ -358,7 +363,6 @@ void UKF::UpdateUKF(MeasurementPackage meas_package, MatrixXd Zsig, int n_z) {
 
   // Normalize angle if Radar
   if (meas_package.sensor_type_ == MeasurementPackage::RADAR) {
-    // Normalize angle
     NormalizeAng(&(z_diff(1)));
   }
 
