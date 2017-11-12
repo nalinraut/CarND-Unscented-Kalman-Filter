@@ -3,7 +3,7 @@
 #include "Eigen/Dense"
 #include <iostream>
 
-#define EPS 0.001; // A small number
+#define EPS 0.001 // A small number
 
 using namespace std;
 using Eigen::MatrixXd;
@@ -93,12 +93,6 @@ void UKF::NormalizeAng(double *ang) {
  * either radar or laser.
  */
 void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
-  /**
-  TODO:
-
-  Complete this function! Make sure you switch between lidar and radar
-  measurements.
-  */
   // Initialize
   if (!is_initialized_) {
     // Covariance matrix
@@ -128,7 +122,7 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
       // Initialize state
       x_ << px, py, 0, 0, 0;
       // Make sure we don't divide by 0
-      if (fabs(x_(0)) < EPS && fabs(x_(1)) < EPS) {
+      if ((fabs(x_(0)) < EPS) && (fabs(x_(1)) < EPS)) {
         x_(0) = EPS;
         x_(1) = EPS;
       }
@@ -271,14 +265,11 @@ void UKF::Prediction(double delta_t) {
  * @param {MeasurementPackage} meas_package
  */
 void UKF::UpdateLidar(MeasurementPackage meas_package) {
-  /**
-  TODO:
-
-  Complete this function! Use lidar data to update the belief about the object's
-  position. Modify the state vector, x_, and covariance, P_.
-
-  You'll also need to calculate the lidar NIS.
-  */
+  // Number of measured dimensions
+  int n_z = 2;
+  // Create matrix for sigma points and transform points into measurement space
+  MatrixXd Zsig = Xsig_pred_.block(0, 0, n_z, n_sig_);
+  UpdateUKF(meas_package, Zsig, n_z);
 }
 
 /**
@@ -286,12 +277,100 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
  * @param {MeasurementPackage} meas_package
  */
 void UKF::UpdateRadar(MeasurementPackage meas_package) {
-  /**
-  TODO:
+  // Number of measured dimensions
+  int n_z = 3;
+  // Create matrix for sigma points in the measurement space
+  MatrixXd Zsig = MatrixXd(n_z, n_sig_);
+  // Transform points into the measurement space
+  for (int i = 0; i < n_sig_; i++) {
+    // Read values
+    double p_x = Xsig_pred_(0,i);
+    double p_y = Xsig_pred_(1,i);
+    double v   = Xsig_pred_(2,i);
+    double yaw = Xsig_pred_(3,i);
+    double v_1 = cos(yaw) * v;
+    double v_2 = sin(yaw) * v;
+    // Measurement model
+    Zsig(0,i) = sqrt(pow(p_x, 2) + pow(p_y, 2));     // r
+    Zsig(1,i) = atan2(p_y, p_x);                     // phi
+    Zsig(2,i) = (p_x * v_1 + p_y * v_2) / Zsig(0,i); // r_dot
+  }
 
-  Complete this function! Use radar data to update the belief about the object's
-  position. Modify the state vector, x_, and covariance, P_.
+  UpdateUKF(meas_package, Zsig, n_z);
+}
 
-  You'll also need to calculate the radar NIS.
-  */
+/**
+ * General update function, common to both sensors
+ * @param {MeasurementPackage} meas_package, {MatrixXd} Zsig, {int} n_z
+ */
+void UKF::UpdateUKF(MeasurementPackage meas_package, MatrixXd Zsig, int n_z) {
+  VectorXd z_pred = VectorXd(n_z);
+  z_pred = Zsig * weights_;
+
+  // Measurement covariance matrix S
+  MatrixXd S = MatrixXd(n_z, n_z);
+  S.fill(0.0);
+  for (int i = 0; i < n_sig_; i++) {
+    // Residual vector
+    VectorXd z_diff = Zsig.col(i) - z_pred;
+    // Normalize angle
+    NormalizeAng(&(z_diff(1)));
+    // Update S
+    S = S + weights_(i) * z_diff * z_diff.transpose();
+  }
+
+  // Noise covariance matrix R
+  MatrixXd R = MatrixXd(n_z, n_z);
+  if (meas_package.sensor_type_ == MeasurementPackage::RADAR) {
+    R = R_radar_;
+  } else if (meas_package.sensor_type_ == MeasurementPackage::LASER) {
+    R = R_lidar_;
+  }
+
+  // Add noise
+  S += R;
+
+  // Cross correlation Tc
+  MatrixXd Tc = MatrixXd(n_x_, n_z);
+  Tc.fill(0.0);
+  for (int i = 0; i < n_sig_; i++) {
+    // Residual vector
+    VectorXd z_diff = Zsig.col(i) - z_pred;
+    if (meas_package.sensor_type_ == MeasurementPackage::RADAR) {
+      // Normalize angle
+      NormalizeAng(&(z_diff(1)));
+    }
+    VectorXd x_diff = Xsig_pred_.col(i) = x_;
+    // Normalize angle
+    NormalizeAng(&(x_diff(3)));
+    // Update Tc
+    Tc = Tc + weights_(i) * x_diff * z_diff.transpose();
+  }
+
+  // Raw measurements
+  VectorXd z = meas_package.raw_measurements_;
+
+  // Kalman gain matrix K
+  MatrixXd K = Tc * S.inverse();
+
+  // Residual
+  VectorXd z_diff = z - z_pred;
+
+  // Normalize angle if Radar
+  if (meas_package.sensor_type_ == MeasurementPackage::RADAR) {
+    // Normalize angle
+    NormalizeAng(&(z_diff(1)));
+  }
+
+  // Update state mean matrix
+  x_ = x_ + K * z_diff;
+  // Update covariance matrix
+  P_ = P_ - K * S * K.transpose();
+
+  // Calculate NIS
+  if (meas_package.sensor_type_ == MeasurementPackage::RADAR) {
+    NIS_radar_ = z.transpose() * S.inverse() * z;
+  } else if (meas_package.sensor_type_ == MeasurementPackage::LASER) {
+    NIS_laser_ = z.transpose() * S.inverse() * z;
+  }
 }
