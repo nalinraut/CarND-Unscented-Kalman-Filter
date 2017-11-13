@@ -69,14 +69,14 @@ UKF::UKF() {
   // Measurement noise covariance matices
   // Radar matrix
   R_radar_ = MatrixXd(3, 3);
-  R_radar_ << pow(std_radr_, 2), 0,                   0,
-              0,                 pow(std_radphi_, 2), 0,
-              0,                 0,                   pow(std_radrd_, 2);
+  R_radar_ << std_radr_*std_radr_, 0,                       0,
+              0,                   std_radphi_*std_radphi_, 0,
+              0,                   0,                       std_radrd_*std_radrd_;
 
   // Lidas matrix
   R_lidar_ = MatrixXd(2, 2);
-  R_lidar_ << pow(std_laspx_, 2), 0,
-              0,                  pow(std_laspy_, 2);
+  R_lidar_ << std_laspx_*std_laspx_, 0,
+              0,                     std_laspy_*std_laspy_;
 }
 
 UKF::~UKF() {}
@@ -114,7 +114,7 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
       float py = rho * sin(phi);
       float vx = rho_dot * cos(phi);
       float vy = rho_dot * sin(phi);
-      float v  = sqrt(pow(vx, 2) + pow(vy, 2));
+      float v  = sqrt(vx*vx + vy*vy);
       // Initialize state
       x_ << px, py, v, 0, 0;
     } else if (meas_package.sensor_type_ == MeasurementPackage::LASER) {
@@ -173,7 +173,7 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
  * measurement and this one.
  */
 void UKF::Prediction(double delta_t) {
-  double delta_t_2 = pow(delta_t, 2);
+  double delta_t_2 = delta_t*delta_t;
   // Aug mean vector
   VectorXd x_aug = VectorXd(n_aug_);
   // Aug state covariance matrix
@@ -186,8 +186,8 @@ void UKF::Prediction(double delta_t) {
 
   P_aug.fill(0.0);
   P_aug.topLeftCorner(n_x_, n_x_) = P_;
-  P_aug(5,5) = pow(std_a_, 2);
-  P_aug(6,6) = pow(std_yawdd_, 2);
+  P_aug(5,5) = std_a_*std_a_;
+  P_aug(6,6) = std_yawdd_*std_yawdd_;
 
   // Square root of P matrix
   MatrixXd L = P_aug.llt().matrixL();
@@ -296,9 +296,9 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
     double v_1 = cos(yaw) * v;
     double v_2 = sin(yaw) * v;
     // Measurement model
-    Zsig(0,i) = sqrt(pow(p_x, 2) + pow(p_y, 2)); // r
+    Zsig(0,i) = sqrt(p_x*p_x + p_y*p_y); // rho
     Zsig(1,i) = atan2(p_y, p_x);                 // phi
-    Zsig(2,i) = (p_x*v_1 + p_y*v_2) / Zsig(0,i); // r_dot
+    Zsig(2,i) = (p_x*v_1 + p_y*v_2) / Zsig(0,i); // rho_dot
   }
 
   UpdateUKF(meas_package, Zsig, n_z);
