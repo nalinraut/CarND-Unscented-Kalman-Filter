@@ -78,7 +78,7 @@ A few points of interest:
 
 ## Implementation
 
-The code skeleton for this project was provided by udacity on [this repo](https://github.com/udacity/CarND-Extended-Kalman-Filter-Project).
+The code skeleton for this project was provided by udacity on [this repo](https://github.com/udacity/CarND-Unscented-Kalman-Filter-Project).
 
 The main program in under the `src` directory.
 ```
