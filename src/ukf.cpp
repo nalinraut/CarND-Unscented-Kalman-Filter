@@ -345,7 +345,7 @@ void UKF::UpdateUKF(MeasurementPackage meas_package, MatrixXd Zsig, int n_z) {
       // Normalize angle
       NormalizeAng(&(z_diff(1)));
     }
-    VectorXd x_diff = Xsig_pred_.col(i) = x_;
+    VectorXd x_diff = Xsig_pred_.col(i) - x_;
     // Normalize angle
     NormalizeAng(&(x_diff(3)));
     // Update Tc
@@ -373,8 +373,8 @@ void UKF::UpdateUKF(MeasurementPackage meas_package, MatrixXd Zsig, int n_z) {
 
   // Calculate NIS
   if (meas_package.sensor_type_ == MeasurementPackage::RADAR) {
-    NIS_radar_ = z.transpose() * S.inverse() * z;
+    NIS_radar_ = z.transpose() * S.inverse() * z_diff;
   } else if (meas_package.sensor_type_ == MeasurementPackage::LASER) {
-    NIS_laser_ = z.transpose() * S.inverse() * z;
+    NIS_laser_ = z.transpose() * S.inverse() * z_diff;
   }
 }
