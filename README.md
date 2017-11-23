@@ -13,7 +13,7 @@ object.
 
 ## Results
 
-The success metrics for this project are the RMSE values for 2 datasets.
+The success metrics for this project are the RMSE values.
 
 The values shoule be below:
 - `0.11` for `P x` and `P y`.
@@ -23,18 +23,16 @@ The values shoule be below:
 
 The folowing table lists the results of both datasets:
 
-| RMSE | Dataset 1 | Dataset 2 |
-|------|-----------|-----------|
-| P x  |     |     |
-| P y  |     |     |
-| V x  |     |     |
-| V y  |     |     |
-
-<!-- TODO -->
+| RMSE | Dataset 1 |
+|------|-----------|
+| P x  |  0.292233   |
+| P y  |  0.227134   |
+| V x  |  0.738225   |
+| V y  |  0.851266   |
 
 #### Using only one senor
 
-For both datasets a run with only one sensor, `radar` or `lidar` was also measured.
+A run with only one sensor, `radar` or `lidar` was also measured.
 
 > You can test this yourself by setting the vars `use_laser_` and `use_radar_` in `src/ukf.cpp`.
 
@@ -44,25 +42,15 @@ Here are the results:
 
 | RMSE | only RADAR | only LIDAR |
 |------|-----------|-----------|
-| P x  |     |     |
-| P y  |     |     |
-| V x  |     |     |
-| V y  |     |     |
+| P x  |  0.785362   |  0.225008   |
+| P y  |  0.703001   |  0.134583   |
+| V x  |  0.707202   |  1.73671   |
+| V y  |  0.917329   |  1.0931   |
 
 Interesting points here:
-<!-- TODO -->
-
-##### Dataset 2
-
-| RMSE | only RADAR | only LIDAR |
-|------|-----------|-----------|
-| P x  |     |     |
-| P y  |     |     |
-| V x  |     |     |
-| V y  |     |     |
-
-A few points of interest:
-<!-- TODO -->
+- With only `Radar` data the results are worse then with both sensors although the RMSE for `Vx` marginally better
+- With only `Lidar` data the position `Px` and `Py` are better then with both sensors but the velocity `Vx` and `Vy` are considerably worse
+- Overall the performance with a single sensor is worse than with both, as we would expect.
 
 ### Images from the simulator
 
@@ -71,10 +59,6 @@ A few points of interest:
 #### Dataset 1
 
 ![alt text](results/UKF-dataset-1.png "Dataset 1")
-
-#### Dataset 2
-
-![alt text](results/UKF-dataset-2.png "Dataset 2")
 
 ## Implementation
 
@@ -93,8 +77,8 @@ The main program in under the `src` directory.
 ```
 
 The main changes were to the folowing files:
-
-<!-- TODO -->
+- `ukf.cpp` - initializes the Unscented Kalman filter, calls the predict and update function, defines the predict and update functions
+- `tools.cpp` - function to calculate RMSE
 
 ### Unit tests
 
