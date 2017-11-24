@@ -16,8 +16,10 @@ object.
 The success metrics for this project are the RMSE values.
 
 The values shoule be below:
-- `0.11` for `P x` and `P y`.
-- `0.52` for `V x` and `V y`.
+- `0.09` for `P x`,
+- `0.10` for `P y`,
+- `0.40` for `V x`,
+- `0.30` for `V y`.
 
 ### RMSE values
 
@@ -29,6 +31,8 @@ The folowing table lists the results of both datasets:
 | P y  |  0.0860925   |
 | V x  |  0.329898   |
 | V y  |  0.213063   |
+
+As we can see the results are below the desired values indicating a **successful Unscented Kalman Filter implementation**.
 
 #### Using only one senor
 
