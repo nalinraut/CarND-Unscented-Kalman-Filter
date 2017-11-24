@@ -25,10 +25,10 @@ The folowing table lists the results of both datasets:
 
 | RMSE | Dataset 1 |
 |------|-----------|
-| P x  |  0.292233   |
-| P y  |  0.227134   |
-| V x  |  0.738225   |
-| V y  |  0.851266   |
+| P x  |  0.0606247   |
+| P y  |  0.0860925   |
+| V x  |  0.329898   |
+| V y  |  0.213063   |
 
 #### Using only one senor
 
@@ -42,14 +42,14 @@ Here are the results:
 
 | RMSE | only RADAR | only LIDAR |
 |------|-----------|-----------|
-| P x  |  0.785362   |  0.225008   |
-| P y  |  0.703001   |  0.134583   |
-| V x  |  0.707202   |  1.73671   |
-| V y  |  0.917329   |  1.0931   |
+| P x  |  0.155448   |  0.100553   |
+| P y  |  0.200174   |  0.0981127   |
+| V x  |  0.362301   |  0.60588   |
+| V y  |  0.320537   |  0.238563   |
 
 Interesting points here:
-- With only `Radar` data the results are worse then with both sensors although the RMSE for `Vx` marginally better
-- With only `Lidar` data the position `Px` and `Py` are better then with both sensors but the velocity `Vx` and `Vy` are considerably worse
+- With only `Radar` data the results are worse then with both sensors but quite similar in terms of velocity `Vx`.
+- With only `Lidar` data the position `Px` and `Py` are far better then with only `Radar`, velocity `Vx` is 2x worse and `Vy` is ~30% better
 - Overall the performance with a single sensor is worse than with both, as we would expect.
 
 ### Images from the simulator
@@ -59,6 +59,8 @@ Interesting points here:
 #### Dataset 1
 
 ![alt text](results/UKF-dataset-1.png "Dataset 1")
+
+> The red and blue dots are the Radar and Lidar measurements and the green dots the predicted position.
 
 ## Implementation
 
